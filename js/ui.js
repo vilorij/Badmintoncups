@@ -218,14 +218,21 @@
       </div>
     `));
     root.querySelector('#demo-btn').addEventListener('click', () => {
-      if (Store.listPlayers().length || Store.listTournaments().length) {
-        if (!confirm('Это перезапишет текущие данные. Продолжить?')) return;
-        localStorage.removeItem('badminton-cups-v1');
-        Store.load();
+      try {
+        if (Store.listPlayers().length || Store.listTournaments().length) {
+          if (!confirm('Это перезапишет текущие данные. Продолжить?')) return;
+          localStorage.removeItem('badminton-cups-v1');
+          Store.load();
+        }
+        seedDemo();
+        const p = Store.listPlayers().length;
+        const tCnt = Store.listTournaments().length;
+        UI.toast('Демо загружено', `Игроков: ${p}, турниров: ${tCnt}. Открой «Турниры».`, 'success');
+        UI.render();
+      } catch (e) {
+        console.error('seedDemo failed', e);
+        UI.toast('Ошибка генерации демо', e && e.message ? e.message : String(e), 'error');
       }
-      seedDemo();
-      UI.toast('Демо загружено', 'Открой «Турниры», чтобы посмотреть.', 'success');
-      UI.render();
     });
 
     const grid = el(`<div class="grid cols-2"></div>`);
