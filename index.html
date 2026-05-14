@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Badminton Cups</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="#/" class="brand">🏸 Badminton Cups</a>
+    <nav class="nav">
+      <a href="#/" data-route="dashboard">Главная</a>
+      <a href="#/players" data-route="players">Игроки</a>
+      <a href="#/tournaments" data-route="tournaments">Турниры</a>
+      <a href="#/settings" data-route="settings">Настройки</a>
+    </nav>
+  </header>
+
+  <main id="app" class="app"></main>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <template id="tpl-modal">
+    <div class="modal-backdrop">
+      <div class="modal">
+        <div class="modal-head">
+          <h3 class="modal-title"></h3>
+          <button class="icon-btn" data-action="close-modal">×</button>
+        </div>
+        <div class="modal-body"></div>
+      </div>
+    </div>
+  </template>
+
+  <script src="js/store.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
