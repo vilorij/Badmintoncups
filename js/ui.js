@@ -3,10 +3,12 @@
   const UI = {};
 
   /* ---------- Helpers ---------- */
+  // Use <template> so HTML5 parser doesn't strip table-only elements
+  // (<tr>, <td>, <thead>, <tbody>) when used outside a <table> wrapper.
   function el(html) {
-    const wrap = document.createElement('div');
-    wrap.innerHTML = html.trim();
-    return wrap.firstElementChild;
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html.trim();
+    return tpl.content.firstElementChild;
   }
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({
