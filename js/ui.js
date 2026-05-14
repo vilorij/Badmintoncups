@@ -91,6 +91,115 @@
     return params;
   }
 
+  /* ---------- Demo seed ---------- */
+  function seedDemo() {
+    const levels = Store.getLevels();
+    const roster = [
+      ['Алексей Петров',   'S'],
+      ['Мария Иванова',    'S-'],
+      ['Дмитрий Сидоров',  'N/s'],
+      ['Ольга Смирнова',   'N/s'],
+      ['Иван Кузнецов',    'N+'],
+      ['Анна Попова',      'N+'],
+      ['Сергей Новиков',   'N'],
+      ['Елена Соколова',   'N'],
+      ['Павел Морозов',    'N-'],
+      ['Ирина Волкова',    'N-'],
+      ['Никита Зайцев',    'tito'],
+      ['Юлия Орлова',      'tito'],
+      ['Михаил Ковалёв',   'beginner'],
+      ['Дарья Романова',   'beginner'],
+      ['Андрей Лебедев',   'S-'],
+      ['Татьяна Беляева',  'N'],
+    ];
+    const players = roster.map(([name, lvl]) =>
+      Store.addPlayer(name, levels.includes(lvl) ? lvl : 'N')
+    );
+
+    // 1) Finished singles tournament (full demo)
+    const past = Store.createTournament({
+      name: 'Зимний кубок',
+      date: '2026-02-08',
+      format: 'singles',
+      courts: 3,
+      groupSize: 4,
+      advancePerGroup: 2,
+      thirdPlaceMatch: true,
+    });
+    for (const p of players.slice(0, 12)) Store.addTeam(past.id, [p.id]);
+    Logic.startGroupStage(past);
+    Logic.tick(past);
+    // simulate full play with deterministic-ish bias toward higher level
+    function simulateAll(t) {
+      let safety = 0;
+      while (t.matches.some(m => m.status !== 'finished') && safety < 500) {
+        safety++;
+        const live = t.matches.filter(m => m.status === 'live');
+        if (!live.length) { Logic.tick(t); continue; }
+        const m = live[0];
+        const team1 = t.teams.find(x => x.id === m.team1);
+        const team2 = t.teams.find(x => x.id === m.team2);
+        const l1 = levels.indexOf(team1.level);
+        const l2 = levels.indexOf(team2.level);
+        const team1Wins = (l1 + Math.random() * 3) > (l2 + Math.random() * 3);
+        const sets = team1Wins ? [[21, 15 + Math.floor(Math.random() * 5)], [21, 12 + Math.floor(Math.random() * 8)]]
+                               : [[15 + Math.floor(Math.random() * 5), 21], [12 + Math.floor(Math.random() * 8), 21]];
+        Store.finishMatch(t.id, m.id, sets);
+        Logic.tick(t, m);
+      }
+    }
+    simulateAll(past);
+
+    // 2) Active doubles tournament (mid-flight)
+    const active = Store.createTournament({
+      name: 'Весенний кубок (пары)',
+      date: '2026-05-15',
+      format: 'doubles',
+      courts: 2,
+      groupSize: 4,
+      advancePerGroup: 2,
+      thirdPlaceMatch: true,
+    });
+    const pairs = [
+      [0, 1], [2, 3], [4, 5], [6, 7],
+      [8, 9], [10, 11], [12, 13], [14, 15],
+    ];
+    for (const [i, j] of pairs) Store.addTeam(active.id, [players[i].id, players[j].id]);
+    Logic.startGroupStage(active);
+    Logic.tick(active);
+    // Finish about 60% of group matches randomly
+    const groupMs = active.matches.filter(m => m.stage === 'group');
+    const toFinish = Math.floor(groupMs.length * 0.6);
+    for (let k = 0; k < toFinish; k++) {
+      // Find a live match
+      const live = active.matches.filter(m => m.status === 'live');
+      if (!live.length) { Logic.tick(active); continue; }
+      const m = live[0];
+      const t1 = active.teams.find(x => x.id === m.team1);
+      const t2 = active.teams.find(x => x.id === m.team2);
+      const l1 = levels.indexOf(t1.level), l2 = levels.indexOf(t2.level);
+      const t1Wins = (l1 + Math.random() * 3) > (l2 + Math.random() * 3);
+      const sets = t1Wins ? [[21, 17], [21, 19]] : [[17, 21], [19, 21]];
+      Store.finishMatch(active.id, m.id, sets);
+      Logic.tick(active, m);
+    }
+    Logic.tick(active);
+
+    // 3) Brand-new tournament in setup (a few teams already)
+    const upcoming = Store.createTournament({
+      name: 'Ночной открытый',
+      date: '2026-06-01',
+      format: 'singles',
+      courts: 4,
+      groupSize: 4,
+      advancePerGroup: 2,
+      thirdPlaceMatch: false,
+    });
+    for (const p of players.slice(0, 5)) Store.addTeam(upcoming.id, [p.id]);
+
+    Store.save();
+  }
+
   /* ---------- Pages ---------- */
 
   // Dashboard
@@ -99,7 +208,25 @@
     const active = tournaments.filter(t => t.status === 'groups' || t.status === 'knockout');
     const announcements = Store.data.announcements.slice(0, 10);
 
-    root.appendChild(el(`<h1>Главная</h1>`));
+    const isEmpty = !Store.listPlayers().length && !tournaments.length;
+    root.appendChild(el(`
+      <div class="row space-between">
+        <h1>Главная</h1>
+        <div class="row">
+          <button class="btn secondary" id="demo-btn">${isEmpty ? '✨ Загрузить демо-данные' : '✨ Демо-данные'}</button>
+        </div>
+      </div>
+    `));
+    root.querySelector('#demo-btn').addEventListener('click', () => {
+      if (Store.listPlayers().length || Store.listTournaments().length) {
+        if (!confirm('Это перезапишет текущие данные. Продолжить?')) return;
+        localStorage.removeItem('badminton-cups-v1');
+        Store.load();
+      }
+      seedDemo();
+      UI.toast('Демо загружено', 'Открой «Турниры», чтобы посмотреть.', 'success');
+      UI.render();
+    });
 
     const grid = el(`<div class="grid cols-2"></div>`);
     grid.appendChild(el(`
